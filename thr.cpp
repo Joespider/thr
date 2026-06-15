@@ -28,56 +28,62 @@ bool StartsWith(String Str, String Start);
 bool fexists(String aFile);
 void copyFile(String Old, String New);
 //void removeFile(String TheFile);
-void shell(String threadNum, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd);
+void shell(String threadNum, String RunShell, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd);
 int len(std::vector<String> Vect);
 
 static void help()
 {
-	String Version = "0.1.08";
+	String Version = "0.1.11";
 	print("Author: Joespider");
 	print("Program: \"" << TheName << "\"");
 	print("Version: " << Version);
 	print("Purpose: \"run multiple commands at once\"");
 	print("Usage: " << TheName << " <args>");
 	print("{REQUIRED}");
-	print("\t-c <command/script>\t\t: run commands or script");
-	print("\t--command <command/script>\t: run commands or script");
+	print("\t-s <shell> -c <command/script>\t\t\t: run commands or script");
+	print("\t--shell <shell> --command <command/script>\t: run commands or script");
+	print("\t-c <command/script>\t\t\t\t: run commands or script (defaulting to the \"sh\" shell)");
+	print("\t--command <command/script>\t\t\t: run commands or script (defaulting to the \"sh\" shell)");
 	print("");
 	print("{OPTIONAL}");
-	print("\t-q\t\t\t\t: hide output");
-	print("\t--quiet\t\t\t\t: hide output");
-	print("\t-qt\t\t\t\t: only show command output");
-	print("\t--quiet-tag\t\t\t: only show command output");
+	print("\t-q\t\t\t\t\t\t: hide output");
+	print("\t--quiet\t\t\t\t\t\t: hide output");
+	print("\t-qt\t\t\t\t\t\t: only show command output");
+	print("\t--quiet-tag\t\t\t\t\t: only show command output");
 	print("");
-	print("\t--log\t\t\t\t: save output to a log (each thread is its own log file)");
-	print("\t\t\t\t\t: -c \"ls\" would save output in \"ls.log\"");
+	print("\t--log\t\t\t\t\t\t: save output to a log (each thread is its own log file)");
+	print("\t\t\t\t\t\t\t: -c \"ls\" would save output in \"ls.log\"");
 	print("");
-	print("\t--log-trd\t\t\t: save output to a log (each thread is its own log file)");
-	print("\t\t\t\t\t: -c \"ls\" would save output in \"{trd[<number>] \"ls\"}.log\"");
+	print("\t--log-trd\t\t\t\t\t: save output to a log (each thread is its own log file)");
+	print("\t\t\t\t\t\t\t: -c \"ls\" would save output in \"{" << TheName << "[<number>] \"ls\"}.log\"");
 	print("");
 	print("{EXAMPLE} Run three commands at once");
-	print("\t$ " << TheName << " -c ls -c \"echo hi\" -c \"whoami\"");
-	print("\t{trd[2] \"echo hi\" (line: 0000)} hi");
-	print("\t{trd[1] \"ls\" (line: 0000)} Desktop");
-	print("\t{trd[1] \"ls\" (line: 0001)} Documents");
-	print("\t{trd[1] \"ls\" (line: 0002)} Downloads");
-	print("\t{trd[1] \"ls\" (line: 0003)} Music");
-	print("\t{trd[1] \"ls\" (line: 0004)} Pictures");
-	print("\t{trd[1] \"ls\" (line: 0005)} Public");
-	print("\t{trd[1] \"ls\" (line: 0006)} Videos");
-	print("\t{trd[3] \"whoami\" (line: 0000)} user");
+	print("\t$ " << TheName << " -s bash -c ls -c \"echo hi\" -c \"whoami\"");
+	print("\t{" << TheName << "[2] /bin/bash -c \"echo hi\" (line: 0000)} hi");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0000)} Desktop");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0001)} Documents");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0002)} Downloads");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0003)} Music");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0004)} Pictures");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0005)} Public");
+	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0006)} Videos");
+	print("\t{" << TheName << "[3] /usr/bin/sh -c \"whoami\" (line: 0000)} user");
 	print("");
 	print("{EXAMPLE} To clean up the results in order of commands");
 	print("\t$ " << TheName << " -c ls -c \"echo hi\" -c \"whoami\"  | sort | sed \"s/ (line: ....)//g\"");
-	print("\t{trd[1] \"ls\"} Desktop");
-	print("\t{trd[1] \"ls\"} Documents");
-	print("\t{trd[1] \"ls\"} Downloads");
-	print("\t{trd[1] \"ls\"} Music");
-	print("\t{trd[1] \"ls\"} Pictures");
-	print("\t{trd[1] \"ls\"} Public");
-	print("\t{trd[1] \"ls\"} Videos");
-	print("\t{trd[2] \"echo hi\"} hi");
-	print("\t{trd[3] \"whoami\"} user");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Desktop");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Documents");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Downloads");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Music");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Pictures");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Public");
+	print("\t{" << TheName << "[1] /usr/bin/sh -c \"ls\"} Videos");
+	print("\t{" << TheName << "[2] /usr/bin/sh -c \"echo hi\"} hi");
+	print("\t{" << TheName << "[3] /usr/bin/sh -c \"whoami\"} user");
+	print("");
+	print("\t$ " << TheName << " -s bash -c \"echo \"hi\"\" -s python -c \"print(\\\\\\\"hi\\\\\\\")\"");
+	print("\t{" << TheName << "[1] /bin/bash -c \"echo \"hi\"\" (line: 0000)} hi");
+	print("\t{" << TheName << "[2] /usr/bin/python3 -c \"print(\\\"hi\\\")\" (line: 0000)} hi\"");
 }
 
 //Check if string begins with substring
@@ -140,13 +146,38 @@ void removeFile(String TheFile)
 	}
 }
 */
-void shell(String threadNum, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd)
+
+String UseShell(String NewShell)
 {
+	String ShellPath = "/usr/bin/sh";
+	if (NewShell == "sh")
+	{
+		ShellPath = "/usr/bin/sh";
+	}
+	else if (NewShell == "bash")
+	{
+		ShellPath = "/bin/bash";
+	}
+	else if (NewShell == "zsh")
+	{
+		ShellPath = "/usr/bin/zsh";
+	}
+	else if (NewShell == "python")
+	{
+		ShellPath = "/usr/bin/python3";
+	}
+
+	return ShellPath;
+}
+
+void shell(String threadNum, String RunShell, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd)
+{
+	String FullCommand = RunShell+" -c \""+command+"\"";
 	std::ofstream myfile;
 	char buffer[128];
 
 	// Open pipe to file
-	FILE* pipe = popen(command.c_str(), "r");
+	FILE* pipe = popen(FullCommand.c_str(), "r");
 	if (!pipe)
 	{
 		error("popen failed!");
@@ -164,7 +195,7 @@ void shell(String threadNum, String command, bool BeQuiet, bool BeQuietTag, bool
 		else if (ToLogWithTrd == true)
 		{
 			//Generate File name for each thread
-			filename = "trd["+threadNum+"] \""+command+"\".log";
+			filename = "trd["+threadNum+"] "+RunShell+" -c \""+command+"\".log";
 		}
 		myfile.open(filename.c_str());
 	}
@@ -188,19 +219,19 @@ void shell(String threadNum, String command, bool BeQuiet, bool BeQuietTag, bool
 				{
 					if (count < 10)
 					{
-						std::cout << "{trd["+threadNum+"] \""+command+"\" (line: 000" << count << ")} ";
+						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 000" << count << ")} ";
 					}
 					else if ((count >= 10) && (count < 100))
 					{
-						std::cout << "{trd["+threadNum+"] \""+command+"\" (line: 00" << count << ")} ";
+						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 00" << count << ")} ";
 					}
 					else if ((count >= 100) && (count < 1000))
 					{
-						std::cout << "{trd["+threadNum+"] \""+command+"\" (line: 0" << count << ")} ";
+						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 0" << count << ")} ";
 					}
 					else
 					{
-						std::cout << "{trd["+threadNum+"] \""+command+"\" (line: " << count << ")} ";
+						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: " << count << ")} ";
 					}
 				}
 				std::cout << buffer;
@@ -220,9 +251,11 @@ void shell(String threadNum, String command, bool BeQuiet, bool BeQuietTag, bool
 //C++ Main...with cli arguments
 int main(int argc, char** argv)
 {
+	std::vector<String> myShell;
 	std::vector<String> myCommands;
 	std::vector<std::thread> myThreads;
 	int numOfThreads;
+	int numOfShells;
 	String ThreadNum;
 	String out = String(argv[0]);
 	String value = "";
@@ -252,6 +285,7 @@ int main(int argc, char** argv)
         //Parsing program name
         std::size_t pos = out.rfind('/');
 	TheName = out.substr(pos + 1);
+
 	out = "";
 	//Args were given
 	if (argc > 1)
@@ -277,6 +311,26 @@ int main(int argc, char** argv)
 						{
 							myCommands.push_back(value);
 						}
+					}
+				}
+
+				numOfThreads = len(myCommands);
+				numOfShells = len(myShell);
+				if (numOfThreads != numOfShells)
+				{
+					myShell.push_back(UseShell(""));
+				}
+			}
+			else if ((out == "-s") || (out == "--shell"))
+			{
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						myShell.push_back(UseShell(value));
 					}
 				}
 			}
@@ -308,7 +362,7 @@ int main(int argc, char** argv)
 			{
 				int TrdN = lp + 1;
 				ThreadNum = Str(TrdN);
-				std::thread ThreadName(shell,ThreadNum,myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithTrd);
+				std::thread ThreadName(shell,ThreadNum,myShell[lp],myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithTrd);
 				myThreads.push_back(std::move(ThreadName));
 			}
 			for (int lp = 0; lp != numOfThreads; lp++)
