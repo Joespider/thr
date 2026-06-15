@@ -28,12 +28,14 @@ bool StartsWith(String Str, String Start);
 bool fexists(String aFile);
 void copyFile(String Old, String New);
 //void removeFile(String TheFile);
-void shell(String threadNum, String RunShell, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd);
+void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd);
+String UseShell(String NewShell);
+String ShellFlag(String NewShell);
 int len(std::vector<String> Vect);
 
 static void help()
 {
-	String Version = "0.1.11";
+	String Version = "0.1.12";
 	print("Author: Joespider");
 	print("Program: \"" << TheName << "\"");
 	print("Version: " << Version);
@@ -44,6 +46,16 @@ static void help()
 	print("\t--shell <shell> --command <command/script>\t: run commands or script");
 	print("\t-c <command/script>\t\t\t\t: run commands or script (defaulting to the \"sh\" shell)");
 	print("\t--command <command/script>\t\t\t: run commands or script (defaulting to the \"sh\" shell)");
+	print("");
+	print("\t--sh <command/script>\t\t\t\t: sh shell run commands or script");
+	print("\t--bash <command/script>\t\t\t\t: bash shell run commands or script");
+	print("\t-ps <command/script>\t\t\t\t: PowerShell shell run commands or script");
+	print("\t--pwsh <command/script>\t\t\t\t: PowerShell shell run commands or script");
+	print("\t--powershell <command/script>\t\t\t: PowerShell shell run commands or script");
+	print("\t-py <command/script>\t\t\t\t: python shell run commands or script");
+	print("\t--python <command/script>\t\t\t: python shell run commands or script");
+	print("\t-z <command/script>\t\t\t\t: zshell shell run commands or script");
+	print("\t--zsh <command/script>\t\t\t\t: zshell run commands or script");
 	print("");
 	print("{OPTIONAL}");
 	print("\t-q\t\t\t\t\t\t: hide output");
@@ -82,6 +94,10 @@ static void help()
 	print("\t{" << TheName << "[3] /usr/bin/sh -c \"whoami\"} user");
 	print("");
 	print("\t$ " << TheName << " -s bash -c \"echo \"hi\"\" -s python -c \"print(\\\\\\\"hi\\\\\\\")\"");
+	print("\t{" << TheName << "[1] /bin/bash -c \"echo \"hi\"\" (line: 0000)} hi");
+	print("\t{" << TheName << "[2] /usr/bin/python3 -c \"print(\\\"hi\\\")\" (line: 0000)} hi\"");
+	print("");
+	print("\t$ " << TheName << " --bash \"echo \"hi\"\" -py \"print(\\\\\\\"hi\\\\\\\")\"");
 	print("\t{" << TheName << "[1] /bin/bash -c \"echo \"hi\"\" (line: 0000)} hi");
 	print("\t{" << TheName << "[2] /usr/bin/python3 -c \"print(\\\"hi\\\")\" (line: 0000)} hi\"");
 }
@@ -158,106 +174,155 @@ String UseShell(String NewShell)
 	{
 		ShellPath = "/bin/bash";
 	}
-	else if (NewShell == "zsh")
+	else if ((NewShell == "zsh") || (NewShell == "z"))
 	{
 		ShellPath = "/usr/bin/zsh";
+	}
+	else if (NewShell == "pwsh")
+	{
+		ShellPath = "/usr/bin/pwsh";
 	}
 	else if (NewShell == "python")
 	{
 		ShellPath = "/usr/bin/python3";
 	}
+/*
+	else if (NewShell == "ruby")
+	{
+		ShellPath = "/usr/bin/ruby";
+	}
+*/
+	else if ((StartsWith(NewShell, "/")) && (NewShell != "/"))
+	{
+		ShellPath = NewShell;
+	}
 
 	return ShellPath;
 }
 
-void shell(String threadNum, String RunShell, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd)
+std::string ShellFlag(std::string NewShell)
 {
-	String FullCommand = RunShell+" -c \""+command+"\"";
-	std::ofstream myfile;
-	char buffer[128];
-
-	// Open pipe to file
-	FILE* pipe = popen(FullCommand.c_str(), "r");
-	if (!pipe)
+	std::string ExeFlag = "";
+	if ((NewShell == "/usr/bin/sh") || (NewShell == "/bin/bash") || (NewShell == "/usr/bin/zsh") || (NewShell == "/usr/bin/pwsh") || (NewShell == "/usr/bin/python3"))
 	{
-		error("popen failed!");
+		ExeFlag = "-c";
+	}
+	else
+	{
+		ExeFlag = "";
 	}
 
-	//Save command output to a log file
-	if ((ToLog == true) || (ToLogWithTrd == true))
+	return ExeFlag;
+}
+
+
+void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd)
+{
+	String FullCommand = "";
+
+	if (ExeFlag != "")
 	{
-		String filename = "";
+		FullCommand = RunShell+" "+ExeFlag+" \""+command+"\"";
+	}
+	else
+	{
+		FullCommand = RunShell+" \""+command+"\"";
+	}
+
+	if (fexists(RunShell))
+	{
+		std::ofstream myfile;
+		char buffer[128];
+
+		// Open pipe to file
+		FILE* pipe = popen(FullCommand.c_str(), "r");
+		if (!pipe)
+		{
+			error("popen failed!");
+		}
+
+		//Save command output to a log file
+		if ((ToLog == true) || (ToLogWithTrd == true))
+		{
+			String filename = "";
+			if (ToLog == true)
+			{
+				//Generate File name for each thread
+				filename = command+".log";
+			}
+			else if (ToLogWithTrd == true)
+			{
+				//Generate File name for each thread
+				filename = "trd["+threadNum+"] "+RunShell+" -c \""+command+"\".log";
+			}
+			myfile.open(filename.c_str());
+		}
+
+		long count = 0;
+		// read till end of process:
+		while (!feof(pipe))
+		{
+			// use buffer to read and add to result
+			if (fgets(buffer, 128, pipe) != NULL)
+			{
+				if ((ToLog == true) || (ToLogWithTrd == true))
+				{
+					myfile << buffer;
+				}
+				//suppress ALL output
+				if (BeQuiet == false)
+				{
+					//suppress tags
+					if (BeQuietTag == false)
+					{
+						if (count < 10)
+						{
+							std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 000" << count << ")} ";
+						}
+						else if ((count >= 10) && (count < 100))
+						{
+							std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 00" << count << ")} ";
+						}
+						else if ((count >= 100) && (count < 1000))
+						{
+							std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 0" << count << ")} ";
+						}
+						else
+						{
+							std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: " << count << ")} ";
+						}
+					}
+					std::cout << buffer;
+					count++;
+				}
+			}
+		}
+
 		if (ToLog == true)
 		{
-			//Generate File name for each thread
-			filename = command+".log";
+			myfile.close();
 		}
-		else if (ToLogWithTrd == true)
-		{
-			//Generate File name for each thread
-			filename = "trd["+threadNum+"] "+RunShell+" -c \""+command+"\".log";
-		}
-		myfile.open(filename.c_str());
-	}
 
-	long count = 0;
-	// read till end of process:
-	while (!feof(pipe))
+		pclose(pipe);
+	}
+	else
 	{
-		// use buffer to read and add to result
-		if (fgets(buffer, 128, pipe) != NULL)
-		{
-			if ((ToLog == true) || (ToLogWithTrd == true))
-			{
-				myfile << buffer;
-			}
-			//suppress ALL output
-			if (BeQuiet == false)
-			{
-				//suppress tags
-				if (BeQuietTag == false)
-				{
-					if (count < 10)
-					{
-						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 000" << count << ")} ";
-					}
-					else if ((count >= 10) && (count < 100))
-					{
-						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 00" << count << ")} ";
-					}
-					else if ((count >= 100) && (count < 1000))
-					{
-						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: 0" << count << ")} ";
-					}
-					else
-					{
-						std::cout << "{" << TheName << "["+threadNum+"] "+RunShell+" -c \""+command+"\" (line: " << count << ")} ";
-					}
-				}
-				std::cout << buffer;
-				count++;
-			}
-		}
+		error("ERROR: \""+RunShell+"\" does not exist");
 	}
-
-	if (ToLog == true)
-	{
-		myfile.close();
-	}
-
-	pclose(pipe);
 }
 
 //C++ Main...with cli arguments
 int main(int argc, char** argv)
 {
 	std::vector<String> myShell;
+	std::vector<String> myExeArg;
 	std::vector<String> myCommands;
 	std::vector<std::thread> myThreads;
 	int numOfThreads;
 	int numOfShells;
 	String ThreadNum;
 	String out = String(argv[0]);
+	String ShellPath = "";
 	String value = "";
 	String PipeIn = "/dev/stdin";
 	String PipeFile = "/tmp/trd.pipe";
@@ -268,6 +333,7 @@ int main(int argc, char** argv)
 	bool SaveToLogWithTrd = false;
 	bool IsNotOk = true;
 	bool pipedData = false;
+	bool InsertCmd = false;
 
 	//piped in data is meant to be sent to commands
 	if(!isatty(fileno(stdin)))
@@ -300,8 +366,8 @@ int main(int argc, char** argv)
 				if (next < argc)
 				{
 					value = String(argv[next]);
-                                        IsNotOk = StartsWith(value,"-");
-                                        if (IsNotOk == false)
+					IsNotOk = StartsWith(value,"-");
+					if (IsNotOk == false)
 					{
 						if (pipedData == true)
 						{
@@ -316,10 +382,28 @@ int main(int argc, char** argv)
 
 				numOfThreads = len(myCommands);
 				numOfShells = len(myShell);
-				if (numOfThreads != numOfShells)
+				if (numOfThreads > numOfShells)
 				{
-					myShell.push_back(UseShell(""));
+					ShellPath = UseShell("sh");
+					myShell.push_back(ShellPath);
+					myExeArg.push_back(ShellFlag(ShellPath));
 				}
+			}
+			else if (InsertCmd)
+			{
+				IsNotOk = StartsWith(out,"-");
+				if (IsNotOk == false)
+				{
+					if (pipedData == true)
+					{
+						myCommands.push_back("cat "+PipeFile+" | "+out);
+					}
+					else
+					{
+						myCommands.push_back(out);
+					}
+				}
+				InsertCmd = false;
 			}
 			else if ((out == "-s") || (out == "--shell"))
 			{
@@ -330,7 +414,119 @@ int main(int argc, char** argv)
                                         IsNotOk = StartsWith(value,"-");
                                         if (IsNotOk == false)
 					{
-						myShell.push_back(UseShell(value));
+						ShellPath = UseShell(value);
+						myShell.push_back(ShellPath);
+						myExeArg.push_back(ShellFlag(ShellPath));
+					}
+				}
+			}
+			else if (out == "--sh")
+			{
+				ShellPath = UseShell("sh");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
+					}
+				}
+			}
+			else if (out == "--bash")
+			{
+				ShellPath = UseShell("bash");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
+					}
+				}
+			}
+			else if ((out == "-ps") || (out == "--pwsh") || (out == "--powershell"))
+			{
+				ShellPath = UseShell("pwsh");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
+					}
+				}
+			}
+			else if ((out == "-py") || (out == "--python"))
+			{
+				ShellPath = UseShell("python");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
+					}
+				}
+			}
+/*
+			else if ((out == "-rb") || (out == "--ruby"))
+			{
+				ShellPath = UseShell("ruby");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
+					}
+				}
+			}
+*/
+			else if ((out == "-z") || (out == "--zsh"))
+			{
+				ShellPath = UseShell("zsh");
+				myShell.push_back(ShellPath);
+				myExeArg.push_back(ShellFlag(ShellPath));
+				InsertCmd = false;
+
+				next = i+1;
+				if (next < argc)
+				{
+					value = String(argv[next]);
+                                        IsNotOk = StartsWith(value,"-");
+                                        if (IsNotOk == false)
+					{
+						InsertCmd = true;
 					}
 				}
 			}
@@ -362,7 +558,7 @@ int main(int argc, char** argv)
 			{
 				int TrdN = lp + 1;
 				ThreadNum = Str(TrdN);
-				std::thread ThreadName(shell,ThreadNum,myShell[lp],myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithTrd);
+				std::thread ThreadName(shell,ThreadNum,myShell[lp],myExeArg[lp],myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithTrd);
 				myThreads.push_back(std::move(ThreadName));
 			}
 			for (int lp = 0; lp != numOfThreads; lp++)
