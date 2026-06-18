@@ -71,7 +71,7 @@ static void help()
 	print("");
 	print("{EXAMPLE} Run three commands at once");
 	print("\t$ " << TheName << " -s bash -c ls -c \"echo hi\" -c \"whoami\"");
-	print("\t{" << TheName << "[2] /bin/bash -c \"echo hi\" (line: 0000)} hi");
+	print("\t{" << TheName << "[2] /bin/sh -c \"echo hi\" (line: 0000)} hi");
 	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0000)} Desktop");
 	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0001)} Documents");
 	print("\t{" << TheName << "[1] /bin/bash -c \"ls\" (line: 0002)} Downloads");
