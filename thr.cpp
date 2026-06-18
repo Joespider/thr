@@ -28,14 +28,14 @@ bool StartsWith(String Str, String Start);
 bool fexists(String aFile);
 void copyFile(String Old, String New);
 //void removeFile(String TheFile);
-void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd);
+void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithThr);
 String UseShell(String NewShell);
 String ShellFlag(String NewShell);
 int len(std::vector<String> Vect);
 
 static void help()
 {
-	String Version = "0.1.12";
+	String Version = "0.1.13";
 	print("Author: Joespider");
 	print("Program: \"" << TheName << "\"");
 	print("Version: " << Version);
@@ -66,7 +66,7 @@ static void help()
 	print("\t--log\t\t\t\t\t\t: save output to a log (each thread is its own log file)");
 	print("\t\t\t\t\t\t\t: -c \"ls\" would save output in \"ls.log\"");
 	print("");
-	print("\t--log-trd\t\t\t\t\t: save output to a log (each thread is its own log file)");
+	print("\t--log-thr\t\t\t\t\t: save output to a log (each thread is its own log file)");
 	print("\t\t\t\t\t\t\t: -c \"ls\" would save output in \"{" << TheName << "[<number>] \"ls\"}.log\"");
 	print("");
 	print("{EXAMPLE} Run three commands at once");
@@ -216,7 +216,7 @@ std::string ShellFlag(std::string NewShell)
 }
 
 
-void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithTrd)
+void shell(String threadNum, String RunShell, String ExeFlag, String command, bool BeQuiet, bool BeQuietTag, bool ToLog, bool ToLogWithThr)
 {
 	String FullCommand = "";
 
@@ -242,7 +242,7 @@ void shell(String threadNum, String RunShell, String ExeFlag, String command, bo
 		}
 
 		//Save command output to a log file
-		if ((ToLog == true) || (ToLogWithTrd == true))
+		if ((ToLog == true) || (ToLogWithThr == true))
 		{
 			String filename = "";
 			if (ToLog == true)
@@ -250,10 +250,10 @@ void shell(String threadNum, String RunShell, String ExeFlag, String command, bo
 				//Generate File name for each thread
 				filename = command+".log";
 			}
-			else if (ToLogWithTrd == true)
+			else if (ToLogWithThr == true)
 			{
 				//Generate File name for each thread
-				filename = "trd["+threadNum+"] "+RunShell+" -c \""+command+"\".log";
+				filename = "thr["+threadNum+"] "+RunShell+" -c \""+command+"\".log";
 			}
 			myfile.open(filename.c_str());
 		}
@@ -265,7 +265,7 @@ void shell(String threadNum, String RunShell, String ExeFlag, String command, bo
 			// use buffer to read and add to result
 			if (fgets(buffer, 128, pipe) != NULL)
 			{
-				if ((ToLog == true) || (ToLogWithTrd == true))
+				if ((ToLog == true) || (ToLogWithThr == true))
 				{
 					myfile << buffer;
 				}
@@ -325,12 +325,12 @@ int main(int argc, char** argv)
 	String ShellPath = "";
 	String value = "";
 	String PipeIn = "/dev/stdin";
-	String PipeFile = "/tmp/trd.pipe";
+	String PipeFile = "/tmp/thr.pipe";
 	int next = 0;
 	bool Quiet = false;
 	bool QuietTags = false;
 	bool SaveToLog = false;
-	bool SaveToLogWithTrd = false;
+	bool SaveToLogWithThr = false;
 	bool IsNotOk = true;
 	bool pipedData = false;
 	bool InsertCmd = false;
@@ -533,12 +533,12 @@ int main(int argc, char** argv)
 			else if (out == "--log")
 			{
 				SaveToLog = true;
-				SaveToLogWithTrd = false;
+				SaveToLogWithThr = false;
 			}
-			else if (out == "--log-trd")
+			else if (out == "--log-thr")
 			{
 				SaveToLog = false;
-				SaveToLogWithTrd = true;
+				SaveToLogWithThr = true;
 			}
 			else if ((out == "-q") || (out == "--quiet"))
 			{
@@ -556,9 +556,9 @@ int main(int argc, char** argv)
 		{
 			for (int lp = 0; lp != numOfThreads; lp++)
 			{
-				int TrdN = lp + 1;
-				ThreadNum = Str(TrdN);
-				std::thread ThreadName(shell,ThreadNum,myShell[lp],myExeArg[lp],myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithTrd);
+				int ThrN = lp + 1;
+				ThreadNum = Str(ThrN);
+				std::thread ThreadName(shell,ThreadNum,myShell[lp],myExeArg[lp],myCommands[lp],Quiet,QuietTags,SaveToLog,SaveToLogWithThr);
 				myThreads.push_back(std::move(ThreadName));
 			}
 			for (int lp = 0; lp != numOfThreads; lp++)
@@ -568,11 +568,11 @@ int main(int argc, char** argv)
 
 			if (pipedData == true)
 			{
-				int passed = std::remove("/tmp/trd.pipe");
+				int passed = std::remove("/tmp/thr.pipe");
 
 				if (passed != 0)
 				{
-					error("could not remove \"/tmp/trd.pipe\"");
+					error("could not remove \"/tmp/thr.pipe\"");
 				}
 			}
 		}
